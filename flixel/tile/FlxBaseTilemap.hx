@@ -1,12 +1,11 @@
 package flixel.tile;
 
 import flixel.FlxObject;
+import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxPoint;
-import flixel.math.FlxRandom;
 import flixel.math.FlxRect;
+import flixel.system.FlxAssets.FlxTilemapGraphicAsset;
 import flixel.util.FlxArrayUtil;
-import flixel.system.FlxAssets;
-import flixel.group.FlxGroup;
 import openfl.Assets;
 
 class FlxBaseTilemap<Tile:FlxObject> extends FlxObject
@@ -61,7 +60,7 @@ class FlxBaseTilemap<Tile:FlxObject> extends FlxObject
 	/**
 	 * Internal collection of tile objects, one for each type of tile in the map (NOTE one for every single tile in the whole map).
 	 */
-	private var _tileObjects:Array<Tile>;
+	private var _tileObjects:Array<Tile> = [];
 
 	/**
 	 * Internal, used to sort of insert blank tiles in front of the tiles in the provided graphic.
@@ -633,7 +632,7 @@ class FlxBaseTilemap<Tile:FlxObject> extends FlxObject
 	 * 
 	 * @param	Tile				The tile or tiles you want to adjust.
 	 * @param	AllowCollisions		Modify the tile or tiles to only allow collisions from certain directions, use FlxObject constants NONE, ANY, LEFT, RIGHT, etc. Default is "ANY".
-	 * @param	Callback			The function to trigger, e.g. lavaCallback(Tile:FlxTile, Object:FlxObject).
+	 * @param	Callback			The function to trigger, e.g. lavaCallback(Tile:FlxObject, Object:FlxObject).
 	 * @param	CallbackFilter		If you only want the callback to go off for certain classes or objects based on a certain class, set that class here.
 	 * @param	Range				If you want this callback to work for a bunch of different tiles, input the range here. Default value is 1.
 	 */

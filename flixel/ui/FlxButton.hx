@@ -15,7 +15,6 @@ import flixel.input.mouse.FlxMouseButton;
 import flixel.input.touch.FlxTouch;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
-import flixel.system.FlxAssets;
 import flixel.system.FlxSound;
 import flixel.text.FlxText;
 import flixel.util.FlxDestroyUtil;
@@ -26,7 +25,7 @@ class GraphicButton extends BitmapData {}
 /**
  * A simple button class that calls a function when clicked by the mouse.
  */
-class FlxButton extends FlxTypedButton<FlxText> implements IFlxInput
+class FlxButton extends FlxTypedButton<FlxText>
 {
 	/**
 	 * Used with public variable status, means not highlighted or pressed.
@@ -114,7 +113,7 @@ class FlxButton extends FlxTypedButton<FlxText> implements IFlxInput
 /**
  * A simple button class that calls a function when clicked by the mouse.
  */
-class FlxTypedButton<T:FlxSprite> extends FlxSprite
+class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 {
 	/**
 	 * The label that appears on the button. Can be any FlxSprite.
@@ -178,13 +177,17 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite
 	public var pressed(get, never):Bool;
 	public var justPressed(get, never):Bool;
 	
-	// we don't need an ID here, so let's just use Int as the type
+	/** 
+	 * We don't need an ID here, so let's just use Int as the type.
+	 */
 	private var input:FlxInput<Int>;
 	
 	/**
 	 * The input currently pressing this button, if none, it's null. Needed to check for its release.
 	 */
 	private var currentInput:IFlxInput;
+
+	private var lastStatus = -1;
 	
 	/**
 	 * Creates a new FlxTypedButton object with a gray background.
@@ -278,7 +281,12 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite
 				updateButton();
 			#end
 			
-			updateStatusAnimation();
+			// Trigger the animation only if the button's input status changes. 
+			if (lastStatus != status) 
+			{
+				updateStatusAnimation();
+				lastStatus = status;
+			}
 		}
 	}
 	

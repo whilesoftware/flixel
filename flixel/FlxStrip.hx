@@ -1,22 +1,17 @@
 package flixel;
-import flixel.graphics.FlxGraphic;
-import flixel.graphics.tile.FlxDrawTrianglesItem;
-import flixel.math.FlxMath;
-import flixel.math.FlxRect;
+
+import flixel.graphics.tile.FlxDrawTrianglesItem.DrawData;
 import flixel.system.FlxAssets.FlxGraphicAsset;
-import flixel.util.FlxColor;
-import openfl.display.Graphics;
-import openfl.display.Sprite;
 import openfl.Vector;
 
 /**
  * A very basic rendering component which uses drawTriangles.
- * You have access to vertices, indices and uvs vectors which are used as data storages for rendering.
+ * You have access to vertices, indices and uvtData vectors which are used as data storages for rendering.
  * The whole FlxGraphic object is used as a texture for this sprite.
  * Use these links for more info about drawTriangles method:
- * http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/display/Graphics.html#drawTriangles%28%29
- * http://help.adobe.com/en_US/as3/dev/WS84753F1C-5ABE-40b1-A2E4-07D7349976C4.html
- * http://www.flashandmath.com/advanced/p10triangles/index.html
+ * @see http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/display/Graphics.html#drawTriangles%28%29
+ * @see http://help.adobe.com/en_US/as3/dev/WS84753F1C-5ABE-40b1-A2E4-07D7349976C4.html
+ * @see http://www.flashandmath.com/advanced/p10triangles/index.html
  * 
  * WARNING: This class is EXTREMELY slow on flash target!
  */
@@ -33,7 +28,7 @@ class FlxStrip extends FlxSprite
 	/**
 	 * A Vector of normalized coordinates used to apply texture mapping.
 	 */
-	public var uvs:DrawData<Float>;
+	public var uvtData:DrawData<Float>;
 	
 	public var colors:DrawData<Int>;
 	
@@ -43,7 +38,7 @@ class FlxStrip extends FlxSprite
 		
 		vertices = new #if flash Vector #else Array #end<Float>();
 		indices = new #if flash Vector #else Array #end<Int>();
-		uvs = new #if flash Vector #else Array #end<Float>();
+		uvtData = new #if flash Vector #else Array #end<Float>();
 		colors = new #if flash Vector #else Array #end<Int>();
 	}
 	
@@ -51,7 +46,7 @@ class FlxStrip extends FlxSprite
 	{
 		vertices = null;
 		indices = null;
-		uvs = null;
+		uvtData = null;
 		colors = null;
 		
 		super.destroy();
@@ -72,7 +67,7 @@ class FlxStrip extends FlxSprite
 			}
 			
 			getScreenPosition(_point, camera);
-			camera.drawTriangles(graphic, vertices, indices, uvs, colors, _point, blend, antialiasing);
+			camera.drawTriangles(graphic, vertices, indices, uvtData, colors, _point, blend, antialiasing);
 		}
 	}
 }
