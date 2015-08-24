@@ -4,18 +4,18 @@ import flixel.input.FlxInput.FlxInputState;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.gamepad.id.FlxGamepadAnalogList;
 import flixel.input.gamepad.id.FlxGamepadButtonList;
-import flixel.input.gamepad.id.FlxGamepadMotionValueList;
-import flixel.input.gamepad.id.FlxGamepadPointerValueList;
-import flixel.input.gamepad.id.WiiRemoteID;
 import flixel.math.FlxPoint;
 import flixel.math.FlxVector;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxStringUtil;
-import flixel.util.FlxTimer;
 
 #if FLX_GAMEINPUT_API
 import flash.ui.GameInputControl;
 import flash.ui.GameInputDevice;
+#end
+
+#if flash
+import flash.system.Capabilities;
 #end
 
 @:allow(flixel.input.gamepad)
@@ -31,18 +31,6 @@ class FlxGamepad implements IFlxDestroyable
 	 * Defaults to detectedModel, but can be changed manually.
 	 */
 	public var model(default, set):FlxGamepadModel;
-	
-	/**
-	 * For gamepads that can have things plugged into them (the Wii Remote, basically).
-	 * Making the user set this helps Flixel properly interpret inputs properly. 
-	 * EX: if you plug a nunchuk into the Wii Remote, you will get different values for 
-	 * certain buttons than with the Wii Remote alone.
-	 * (This is probably why Wii games ask the player what control scheme they are using.)
-	 * 
-	 * In the future, this could also be used for any attachment that exposes new API features
-	 * to the controller, e.g. a microphone or headset
-	 */
-	public var attachment(default, set):FlxGamepadModelAttachment;
 	
 	/**
 	 * The gamepad model this gamepad has been identified as.
@@ -75,15 +63,6 @@ class FlxGamepad implements IFlxDestroyable
 	 * Helper class to get the justMoved, justReleased, and float values of analog input.
 	 */
 	public var analog(default, null):FlxGamepadAnalogList;
-	/**
-	 * Helper class to get the float values of motion-sensing input, if it is supported
-	 */
-	public var motion(default, null):FlxGamepadMotionValueList;
-	/**
-	 * Helper class to get the float values of mouse-like pointer input, if it is supported.
-	 * (contains continously updated X and Y coordinates, each between 0.0 and 1.0)
-	 */
-	public var pointer(default, null):FlxGamepadPointerValueList;
 	
 	#if FLX_JOYSTICK_API
 	public var hat(default, null):FlxPoint = FlxPoint.get();
@@ -96,57 +75,49 @@ class FlxGamepad implements IFlxDestroyable
 	private var manager:FlxGamepadManager;
 	private var _deadZone:Float = 0.15;
 	
+	#if FLX_JOYSTICK_API
 	private var leftStick:FlxGamepadAnalogStick;
 	private var rightStick:FlxGamepadAnalogStick;
-	#if FLX_GAMEINPUT_API
+	#elseif FLX_GAMEINPUT_API
 	private var _device:GameInputDevice; 
 	#end
 	
-	public function new(ID:Int, Manager:FlxGamepadManager, ?Model:FlxGamepadModel, ?Attachment:FlxGamepadModelAttachment) 
+	#if flash
+	private var _isChrome:Bool = false;
+	#end
+	
+	public function new(ID:Int, Manager:FlxGamepadManager, ?Model:FlxGamepadModel) 
 	{
 		id = ID;
 		
 		manager = Manager;
 		
+		if (Model == null)
+			Model = XBox360;
+		
+		buttonIndex = new FlxGamepadMapping(model);
+		model = Model;
+		detectedModel = Model;
+		
+		#if flash
+		_isChrome = (Capabilities.manufacturer == "Google Pepper");
+		#end
+		
 		pressed = new FlxGamepadButtonList(FlxInputState.PRESSED, this);
 		justPressed = new FlxGamepadButtonList(FlxInputState.JUST_PRESSED, this);
 		justReleased = new FlxGamepadButtonList(FlxInputState.JUST_RELEASED, this);
 		analog = new FlxGamepadAnalogList(this);
-		motion = new FlxGamepadMotionValueList(this);
-		pointer = new FlxGamepadPointerValueList(this);
-		
-		if (Model == null)
-			Model = XBox360;
-			
-		if (Attachment == null)
-			Attachment = None;
-		
-		buttonIndex = new FlxGamepadMapping(model, attachment);
-		model = Model;
-		detectedModel = Model;
 	}
 	
 	public function set_model(Model:FlxGamepadModel):FlxGamepadModel
 	{
 		model = Model;
 		buttonIndex.model = Model;
-		
-		motion.isSupported = buttonIndex.supportsMotion();
-		pointer.isSupported = buttonIndex.supportsPointer();
-		
+		#if FLX_JOYSTICK_API
 		leftStick = getRawAnalogStick(FlxGamepadInputID.LEFT_ANALOG_STICK);
 		rightStick = getRawAnalogStick(FlxGamepadInputID.RIGHT_ANALOG_STICK);
-		
+		#end
 		return model;
-	}
-	
-	public function set_attachment(Attachment:FlxGamepadModelAttachment):FlxGamepadModelAttachment
-	{
-		attachment = Attachment;
-		buttonIndex.attachment = Attachment;
-		leftStick = getRawAnalogStick(FlxGamepadInputID.LEFT_ANALOG_STICK);
-		rightStick = getRawAnalogStick(FlxGamepadInputID.RIGHT_ANALOG_STICK);
-		return attachment;
 	}
 	
 	/**
@@ -172,7 +143,6 @@ class FlxGamepad implements IFlxDestroyable
 	
 	public function getButton(RawID:Int):FlxGamepadButton
 	{
-		if (RawID == -1) return null;
 		var gamepadButton:FlxGamepadButton = buttons[RawID];
 		
 		if (gamepadButton == null)
@@ -182,11 +152,6 @@ class FlxGamepad implements IFlxDestroyable
 		}
 		
 		return gamepadButton;
-	}
-	
-	public inline function getFlipAxis(AxisID:Int):Int
-	{
-		return buttonIndex.getFlipAxis(AxisID);
 	}
 	
 	/**
@@ -206,7 +171,6 @@ class FlxGamepad implements IFlxDestroyable
 		for (i in 0..._device.numControls)
 		{
 			control = _device.getControlAt(i);
-			
 			var value = control.value;
 			value = Math.abs(value);		//quick absolute value for analog sticks
 			button = getButton(i);
@@ -220,7 +184,6 @@ class FlxGamepad implements IFlxDestroyable
 				button.press();
 			}
 		}
-		
 		#elseif FLX_JOYSTICK_API
 		for (i in 0...axis.length)
 		{
@@ -230,7 +193,7 @@ class FlxGamepad implements IFlxDestroyable
 			if (button != null)
 			{
 				//TODO: account for circular deadzone if an analog stick input is detected?
-				var value = Math.abs(axis[i]) * getFlipAxis(i);
+				var value = Math.abs(axis[i]);
 				if (value > deadZone)
 				{
 					button.press();
@@ -526,28 +489,9 @@ class FlxGamepad implements IFlxDestroyable
 	 * use this only for things like FlxGamepadButtonID.LEFT_TRIGGER, 
 	 * use getXAxis() / getYAxis() for analog sticks!
 	 */
-	public function getAxis(AxisButtonID:FlxGamepadInputID):Float
+	public inline function getAxis(AxisButtonID:FlxGamepadInputID):Float
 	{
-		#if !FLX_JOYSTICK_API
-			return getAxisRaw(getRawID(AxisButtonID));
-		#else
-			var fakeAxisRawID:Int = checkForFakeAxis(AxisButtonID);
-			
-			if (fakeAxisRawID == -1)
-			{
-				//return the regular axis value
-				var rawID = getRawID(AxisButtonID);
-				return getAxisRaw(rawID) * getFlipAxis(AxisButtonID);
-			}
-			else
-			{
-				//if analog isn't supported for this input, return the correct digital button input instead
-				var btn = getButton(fakeAxisRawID);
-				if (btn == null) return 0;
-				if (btn.pressed) return 1;
-			}
-			return 0;
-		#end
+		return getAxisRaw(getRawID(AxisButtonID));
 	}
 	
 	/**
@@ -574,36 +518,14 @@ class FlxGamepad implements IFlxDestroyable
 		return buttonIndex.axisIndexToRawID(AxisIndex);
 	}
 	
-	public inline function checkForFakeAxis(ID:FlxGamepadInputID):Int
+	public inline function isAxisForAnalogStick(AxisIndex:Int):Bool
 	{
-		return buttonIndex.checkForFakeAxis(ID);
+		return AxisIndex == leftStick.x  ||
+		       AxisIndex == leftStick.y  ||
+		       AxisIndex == rightStick.x ||
+		       AxisIndex == rightStick.y;
 	}
 	#end
-	
-	public function isAxisForMotion(AxisIndex:Int):Bool
-	{
-		return buttonIndex.isAxisForMotion(AxisIndex);
-	}
-	
-	public function isAxisForAnalogStick(AxisIndex:Int):Bool
-	{
-		if (leftStick != null)
-		{
-			if (AxisIndex == leftStick.x  || AxisIndex == leftStick.y)  return true;
-		}
-		if (rightStick != null)
-		{
-			if (AxisIndex == rightStick.x || AxisIndex == rightStick.y) return true;
-		}
-		return false;
-	}
-	
-	public inline function getAnalogStickByAxis(AxisIndex:Int):FlxGamepadAnalogStick
-	{
-		if (leftStick != null  && AxisIndex == leftStick.x  || AxisIndex == leftStick.y)  return leftStick;
-		if (rightStick != null && AxisIndex == rightStick.x || AxisIndex == rightStick.y) return rightStick;
-		return null;
-	}
 	
 	/**
 	 * Given a ButtonID for an analog stick, gets the value of its x axis
@@ -637,7 +559,17 @@ class FlxGamepad implements IFlxDestroyable
 	 */
 	public function getYAxisRaw(Stick:FlxGamepadAnalogStick):Float
 	{
-		return getAnalogYAxisValue(Stick);
+		var axisValue = getAnalogYAxisValue(Stick);
+		
+		// the y axis is inverted on the Xbox gamepad in flash for some reason - but not in Chrome!
+		#if flash
+		if (model == XBox360 && !_isChrome)
+		{
+			axisValue = -axisValue;
+		}
+		#end
+		
+		return axisValue;
 	}
 
 	/**
@@ -693,10 +625,6 @@ class FlxGamepad implements IFlxDestroyable
 		var axisValue:Float = 0;
 		
 		#if FLX_GAMEINPUT_API
-		if (AxisID == -1)
-		{
-			return 0;
-		}
 		if ((_device != null) && _device.enabled)
 		{
 			axisValue = _device.getControlAt(AxisID).value;
@@ -710,17 +638,11 @@ class FlxGamepad implements IFlxDestroyable
 		axisValue = axis[AxisID];
 		#end
 		
-		if (isAxisForAnalogStick(AxisID))
-		{
-			axisValue *= getFlipAxis(AxisID);
-		}
-		
 		return axisValue;
 	}
 	
 	private function getAnalogXAxisValue(stick:FlxGamepadAnalogStick):Float
 	{
-		if (stick == null) return 0;
 		return if (deadZoneMode == CIRCULAR)
 			getAnalogAxisValueCircular(stick, stick.x);
 		else
@@ -729,7 +651,6 @@ class FlxGamepad implements IFlxDestroyable
 	
 	private function getAnalogYAxisValue(stick:FlxGamepadAnalogStick):Float
 	{
-		if (stick == null) return 0;
 		return if (deadZoneMode == CIRCULAR)
 			getAnalogAxisValueCircular(stick, stick.y);
 		else
@@ -738,7 +659,6 @@ class FlxGamepad implements IFlxDestroyable
 	
 	private function getAnalogAxisValueCircular(stick:FlxGamepadAnalogStick, axisID:Int):Float
 	{
-		if (stick == null) return 0;
 		var xAxis = getAxisValue(stick.x);
 		var yAxis = getAxisValue(stick.y);
 		
@@ -799,73 +719,11 @@ class FlxGamepadAnalogStick
 	public var x(default, null):Int;
 	public var y(default, null):Int;
 	
-	/**a raw button input ID, for sending a digital event for "up" alongside the analog event**/
-	public var rawUp(default, null):Int = -1;
-	/**a raw button input ID, for sending a digital event for "down" alongside the analog event**/
-	public var rawDown(default, null):Int = -1;
-	/**a raw button input ID, for sending a digital event for "left" alongside the analog event**/
-	public var rawLeft(default, null):Int = -1;
-	/**a raw button input ID, for sending a digital event for "right" alongside the analog event**/
-	public var rawRight(default, null):Int = -1;
-	
-	/**the absolute value the dpad must be greater than before digital inputs are sent**/
-	public var digitalThreshold(default, null):Float = 0.5;
-	
-	/**when analog inputs are received, how to process them digitally**/
-	public var mode(default, null):FlxAnalogToDigitalMode = OnlyAnalog;
-	
-	public function new(x:Int, y:Int, ?settings:FlxGamepadAnalogStickSettings)
+	public function new(x:Int, y:Int)
 	{
 		this.x = x;
 		this.y = y;
-		if (settings != null)
-		{
-			mode     = (settings.mode  != null ? settings.mode  : OnlyAnalog);
-			rawUp    = (settings.up    != null ? settings.up    : -1);
-			rawDown  = (settings.down  != null ? settings.down  : -1);
-			rawLeft  = (settings.left  != null ? settings.left  : -1);
-			rawRight = (settings.right != null ? settings.right : -1);
-			digitalThreshold = (settings.threshold != null ? settings.threshold : -1);
-		}
 	}
-	
-	public function toString():String
-	{
-		return FlxStringUtil.getDebugString([
-			LabelValuePair.weak("x", x),
-			LabelValuePair.weak("y", y),
-			LabelValuePair.weak("rawUp", rawUp),
-			LabelValuePair.weak("rawDown", rawDown),
-			LabelValuePair.weak("rawLeft", rawLeft),
-			LabelValuePair.weak("rawRight", rawRight),
-			LabelValuePair.weak("digitalThreshold", digitalThreshold),
-			LabelValuePair.weak("mode", mode)]);
-	}
-}
-
-typedef FlxGamepadAnalogStickSettings = {
-	?up:Int,
-	?down:Int,
-	?left:Int,
-	?right:Int,
-	?threshold:Float,
-	?mode:FlxAnalogToDigitalMode
-}
-
-enum FlxAnalogToDigitalMode
-{
-	/**
-	 * Send both digital and analog events when the analog stick is moved
-	 */
-	Both;
-	/**
-	 * Send only digital events when the analog stick is moved
-	 */
-	OnlyDigital;
-	/**
-	 * Send only analog events when the analog stick is moved
-	 */
-	OnlyAnalog;
 }
 
 enum FlxGamepadModel
@@ -876,13 +734,4 @@ enum FlxGamepadModel
 	PS4;
 	XBox360;
 	XInput;
-	MayflashWiiRemote;
-	WiiRemote;
-}
-
-enum FlxGamepadModelAttachment
-{
-	WiiNunchuk;
-	WiiClassicController;
-	None;
 }

@@ -78,9 +78,7 @@ class FlxObject extends FlxBasic
 	 */
 	public static function separate(Object1:FlxObject, Object2:FlxObject):Bool
 	{
-		var separatedX:Bool = separateX(Object1, Object2);
-		var separatedY:Bool = separateY(Object1, Object2);
-		return separatedX || separatedY;
+		return separateX(Object1, Object2) || separateY(Object1, Object2);
 	}
 	
 	/**
@@ -92,10 +90,8 @@ class FlxObject extends FlxBasic
 	 * @return	Whether the objects in fact touched.
 	 */
 	public static function updateTouchingFlags(Object1:FlxObject, Object2:FlxObject):Bool
-	{	
-		var touchingX:Bool = updateTouchingFlagsX(Object1, Object2);
-		var touchingY:Bool = updateTouchingFlagsY(Object1, Object2);
-		return touchingX || touchingY;
+	{
+		return updateTouchingFlagsX(Object1, Object2) || updateTouchingFlagsY(Object1, Object2);
 	}
 	
 	/**

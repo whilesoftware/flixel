@@ -219,16 +219,12 @@ class FlxAngle
 	}
 	#end
 	
-	 /**
-	  *  Translate an object's facing to angle.
-	  * 
-	  * @param	FacingBitmask	Bitmask from which to calculate the angle, as in FlxSprite::facing
-	  * @param	AsDegrees		If you need the value in degrees instead of radians, set to true
-	  * @return	The angle (in radians unless AsDegrees is true)
-	  */
-	public static inline function angleFromFacing(FacingBitmask:Int, AsDegrees:Bool = false):Float
+	/**
+	 * Translate an object's facing to angle
+	 */
+	public static inline function angleFromFacing(Sprite:FlxSprite, AsDegrees:Bool = false):Float
 	{		
-		var degrees = switch (FacingBitmask)
+		var degrees = switch (Sprite.facing)
 		{
 			case FlxObject.LEFT: 180;
 			case FlxObject.RIGHT: 0;
