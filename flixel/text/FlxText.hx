@@ -33,11 +33,6 @@ using StringTools;
 class FlxText extends FlxSprite
 {
 	/**
-	 * 2px gutter on both top and bottom
-	 */
-	private static inline var VERTICAL_GUTTER:Int = 4;
-
-	/**
 	 * The text being displayed.
 	 */
 	public var text(default, set):String = "";
@@ -757,7 +752,7 @@ class FlxText extends FlxSprite
 			return;
 		
 		var oldWidth:Int = 0;
-		var oldHeight:Int = VERTICAL_GUTTER;
+		var oldHeight:Int = 0;
 		
 		if (graphic != null)
 		{
@@ -766,8 +761,8 @@ class FlxText extends FlxSprite
 		}
 		
 		var newWidth:Float = textField.width;
-		// Account for gutter
-		var newHeight:Float = textField.textHeight + VERTICAL_GUTTER;
+		// Account for 2px gutter on top and bottom (that's why there is "+ 4")
+		var newHeight:Float = textField.textHeight + 4;
 		
 		// prevent text height from shrinking on flash if text == ""
 		if (textField.textHeight == 0) 
@@ -810,7 +805,6 @@ class FlxText extends FlxSprite
 			
 			_matrix.identity();
 			
-			#if (flash || openfl_legacy)
 			// If it's a single, centered line of text, we center it ourselves so it doesn't blur to hell
 			if (_defaultFormat.align == TextFormatAlign.CENTER && textField.numLines == 1)
 			{
@@ -825,7 +819,6 @@ class FlxText extends FlxSprite
 				if (textWidth <= textField.width)
 					_matrix.translate(Math.floor((textField.width - textWidth) / 2), 0);
 			}
-			#end
 			
 			applyBorderStyle();
 			applyBorderTransparency();
